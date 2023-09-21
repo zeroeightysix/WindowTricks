@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Dalamud.Logging;
 using Dalamud.Memory;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using FFXIVClientStructs.Interop;
 
-namespace WindowTricks;
+namespace WindowTricks.NativeUI;
 
-public static class NativeUI
+public static class UiUtils
 {
     // Some sub-windows don't have a `ParentID`. We store the known ones here.
     private static Dictionary<string, string> HiddenParents = new Dictionary<string, string>
@@ -32,7 +31,7 @@ public static class NativeUI
         }
     }
 
-    public static unsafe AtkUnitBase* FollowUp(AtkUnitBase* unitBase, Action<Pointer<AtkUnitBase>>? consumer = null)
+    public static unsafe AtkUnitBase* FindRoot(AtkUnitBase* unitBase, Action<Pointer<AtkUnitBase>>? consumer = null)
     {
         var rapture = AtkStage.GetSingleton()->RaptureAtkUnitManager;
 

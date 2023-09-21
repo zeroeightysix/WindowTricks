@@ -8,6 +8,7 @@ using Dalamud.IoC;
 using Dalamud.Memory;
 using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using WindowTricks.NativeUI;
 using WindowTricks.Windows;
 
 namespace WindowTricks;
@@ -18,6 +19,7 @@ public class Service
     public static Framework Framework { get; set; } = null!;
 }
 
+// ReSharper disable once ClassNeverInstantiated.Global
 public sealed class Plugin : IDalamudPlugin
 {
     public string Name => "WindowTricks";
@@ -76,13 +78,13 @@ public sealed class Plugin : IDalamudPlugin
             foreach (var index in Enumerable.Range(0, (int)focusedList->Count))
             {
                 var unitBase = (&focusedList->AtkUnitEntries)[index];
-                var root = NativeUI.FollowUp(unitBase);
+                var root = UiUtils.FindRoot(unitBase);
                 focused.Add((nint)root);
             }
 
             foreach (var index in Enumerable.Range(0, (int)depthFive->Count))
             {
-                var unitBase = NativeUI.FollowUp((&depthFive->AtkUnitEntries)[index]);
+                var unitBase = UiUtils.FindRoot((&depthFive->AtkUnitEntries)[index]);
 
                 if (!unitBase->IsVisible) continue;
                 if (*unitBase->Name == '_' || IgnoredUnits.Contains(MemoryHelper.ReadStringNullTerminated((IntPtr)unitBase->Name)))
@@ -109,7 +111,7 @@ public sealed class Plugin : IDalamudPlugin
         switch (args)
         {
             case "reset":
-                NativeUI.ResetAlphas();
+                UiUtils.ResetAlphas();
                 break;
             default:
                 ConfigWindow.IsOpen = !ConfigWindow.IsOpen;
