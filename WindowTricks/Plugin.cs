@@ -30,9 +30,13 @@ public sealed class Plugin : IDalamudPlugin
 
     private ConfigWindow ConfigWindow { get; init; }
 
-    private static readonly string[] BlacklistedUnits =
+    // HUD addons that shouldn't be transparent
+    private static readonly string[] IgnoredUnits =
     {
-        "Hud"
+        "Hud",
+        "AreaMap",
+        "ChatLog",
+        "ScenarioTree"
     };
 
     public Plugin(
@@ -82,7 +86,7 @@ public sealed class Plugin : IDalamudPlugin
                 var unitBase = NativeUI.FollowUp((&depthFive->AtkUnitEntries)[index]);
 
                 if (!unitBase->IsVisible || unitBase->Alpha is not 255 and not 125) continue;
-                if (*unitBase->Name == '_' || BlacklistedUnits.Contains(MemoryHelper.ReadStringNullTerminated((IntPtr)unitBase->Name)))
+                if (*unitBase->Name == '_' || IgnoredUnits.Contains(MemoryHelper.ReadStringNullTerminated((IntPtr)unitBase->Name)))
                     continue;
                 
                 unitBase->SetAlpha(focused.Contains((nint)unitBase) ? (byte)255 : (byte)125);
