@@ -5,7 +5,6 @@ using Dalamud.Game;
 using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
-using Dalamud.Logging;
 using Dalamud.Memory;
 using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Component.GUI;
@@ -85,11 +84,11 @@ public sealed class Plugin : IDalamudPlugin
             {
                 var unitBase = NativeUI.FollowUp((&depthFive->AtkUnitEntries)[index]);
 
-                if (!unitBase->IsVisible || unitBase->Alpha is not 255 and not 125) continue;
+                if (!unitBase->IsVisible) continue;
                 if (*unitBase->Name == '_' || IgnoredUnits.Contains(MemoryHelper.ReadStringNullTerminated((IntPtr)unitBase->Name)))
                     continue;
                 
-                unitBase->SetAlpha(focused.Contains((nint)unitBase) ? (byte)255 : (byte)125);
+                unitBase->SetAlpha(focused.Contains((nint)unitBase) ? (byte)255 : Configuration.Transparency);
             }
         }
     }

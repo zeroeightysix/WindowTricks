@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Numerics;
 using Dalamud.Interface.Windowing;
 using ImGuiNET;
 
@@ -11,7 +10,7 @@ public class ConfigWindow : Window, IDisposable
 
     public ConfigWindow(Plugin plugin) : base(
         plugin.Name,
-        ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
+        ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
         ImGuiWindowFlags.NoScrollWithMouse)
     {
         this.configuration = plugin.Configuration;
@@ -24,8 +23,19 @@ public class ConfigWindow : Window, IDisposable
         var configValue = this.configuration.EnableTransparentWindows;
         if (ImGui.Checkbox("Enable Transparent Windows", ref configValue))
         {
-            this.configuration.EnableTransparentWindows = configValue;
-            this.configuration.Save();
+            configuration.EnableTransparentWindows = configValue;
+            configuration.Save();
+        }
+
+        if (configuration.EnableTransparentWindows)
+        {
+            var transparency = (int)configuration.Transparency;
+            if (ImGui.SliderInt("Transparency", ref transparency, 20, 254,
+                                $"{(int)(transparency / 2.55f)}%%", ImGuiSliderFlags.NoInput))
+            {
+                configuration.Transparency = (byte)transparency;
+                configuration.Save();
+            }
         }
     }
 }

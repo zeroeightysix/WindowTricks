@@ -10,6 +10,7 @@ public class Configuration : IPluginConfiguration
     public int Version { get; set; } = 0;
 
     public bool EnableTransparentWindows { get; set; } = true;
+    public byte Transparency { get; set; } = 140;
 
     // the below exist just to make saving less cumbersome
     [NonSerialized]
