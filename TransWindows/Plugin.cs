@@ -1,75 +1,110 @@
-﻿using Dalamud.Game.Command;
+﻿using System.Collections.Generic;
+using System.Linq;
+using Dalamud.Game;
+using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using TransWindows.Windows;
 
-namespace TransWindows
+namespace TransWindows;
+
+public class Service
 {
-    public sealed class Plugin : IDalamudPlugin
+    [PluginService] public static Framework Framework { get; set; } = null!;
+}
+
+public sealed class Plugin : IDalamudPlugin
+{
+    public string Name => "TransWindows";
+    private const string CommandName = "/twindows";
+
+    private DalamudPluginInterface PluginInterface { get; init; }
+    private CommandManager CommandManager { get; init; }
+    public Configuration Configuration { get; init; }
+    public WindowSystem WindowSystem = new("TransWindows");
+
+    private ConfigWindow ConfigWindow { get; init; }
+    private MainWindow MainWindow { get; init; }
+
+    public Plugin(
+        [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
+        [RequiredVersion("1.0")] CommandManager commandManager)
     {
-        public string Name => "TransWindows";
-        private const string CommandName = "/twindows";
+        this.PluginInterface = pluginInterface;
+        pluginInterface.Create<Service>();
+        this.CommandManager = commandManager;
 
-        private DalamudPluginInterface PluginInterface { get; init; }
-        private CommandManager CommandManager { get; init; }
-        public Configuration Configuration { get; init; }
-        public WindowSystem WindowSystem = new("TransWindows");
+        this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+        this.Configuration.Initialize(this.PluginInterface);
 
-        private ConfigWindow ConfigWindow { get; init; }
-        private MainWindow MainWindow { get; init; }
+        // you might normally want to embed resources and load them from the manifest stream
 
-        public Plugin(
-            [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
-            [RequiredVersion("1.0")] CommandManager commandManager)
+        ConfigWindow = new ConfigWindow(this);
+        MainWindow = new MainWindow(this);
+
+        WindowSystem.AddWindow(ConfigWindow);
+        WindowSystem.AddWindow(MainWindow);
+
+        this.CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            this.PluginInterface = pluginInterface;
-            this.CommandManager = commandManager;
+            HelpMessage = "A useful message to display in /xlhelp"
+        });
 
-            this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-            this.Configuration.Initialize(this.PluginInterface);
+        this.PluginInterface.UiBuilder.Draw += DrawUI;
+        this.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
+        Service.Framework.Update += OnUpdate;
+    }
 
-            // you might normally want to embed resources and load them from the manifest stream
+    private void OnUpdate(Framework framework)
+    {
+        unsafe
+        {
+            var stage = AtkStage.GetSingleton();
+            var unitManagers = &stage->RaptureAtkUnitManager->AtkUnitManager;
+            var depthFive = &unitManagers->DepthLayerFiveList;
+            var focusedList = &unitManagers->FocusedUnitsList;
+            
+            var focused = new List<nint>();
+            foreach (var index in Enumerable.Range(0, (int)focusedList->Count))
+                focused.Add((nint)(&focusedList->AtkUnitEntries)[index]);
 
-            ConfigWindow = new ConfigWindow(this);
-            MainWindow = new MainWindow(this);
-
-            WindowSystem.AddWindow(ConfigWindow);
-            WindowSystem.AddWindow(MainWindow);
-
-            this.CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
+            foreach (var index in Enumerable.Range(0, (int)depthFive->Count))
             {
-                HelpMessage = "A useful message to display in /xlhelp"
-            });
-
-            this.PluginInterface.UiBuilder.Draw += DrawUI;
-            this.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
+                var unitBase = (&depthFive->AtkUnitEntries)[index];
+                if (!unitBase->IsVisible || *unitBase->Name == '_') continue;
+                
+                unitBase->SetAlpha(focused.Contains((nint)unitBase) ? (byte)255 : (byte)125);
+            }
         }
+    }
 
-        public void Dispose()
-        {
-            this.WindowSystem.RemoveAllWindows();
+    public void Dispose()
+    {
+        this.WindowSystem.RemoveAllWindows();
 
-            ConfigWindow.Dispose();
-            MainWindow.Dispose();
+        ConfigWindow.Dispose();
+        MainWindow.Dispose();
 
-            this.CommandManager.RemoveHandler(CommandName);
-        }
+        this.CommandManager.RemoveHandler(CommandName);
+        
+        Service.Framework.Update -= OnUpdate;
+    }
 
-        private void OnCommand(string command, string args)
-        {
-            // in response to the slash command, just display our main ui
-            MainWindow.IsOpen = true;
-        }
+    private void OnCommand(string command, string args)
+    {
+        // in response to the slash command, just display our main ui
+        MainWindow.IsOpen = true;
+    }
 
-        private void DrawUI()
-        {
-            this.WindowSystem.Draw();
-        }
+    private void DrawUI()
+    {
+        this.WindowSystem.Draw();
+    }
 
-        public void DrawConfigUI()
-        {
-            ConfigWindow.IsOpen = true;
-        }
+    public void DrawConfigUI()
+    {
+        ConfigWindow.IsOpen = true;
     }
 }
