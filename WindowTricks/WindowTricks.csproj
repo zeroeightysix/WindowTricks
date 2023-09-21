@@ -6,8 +6,8 @@
     <Version>0.0.0.1</Version>
     <Description>A sample plugin.</Description>
     <Copyright></Copyright>
-    <PackageProjectUrl>https://github.com/goatcorp/TransWindows</PackageProjectUrl>
-    <RootNamespace>TransWindows</RootNamespace>
+    <PackageProjectUrl>https://github.com/goatcorp/WindowTricks</PackageProjectUrl>
+    <RootNamespace>WindowTricks</RootNamespace>
   </PropertyGroup>
 
   <PropertyGroup>

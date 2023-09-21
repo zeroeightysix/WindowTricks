@@ -1,59 +1,62 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Game;
 using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
+using Dalamud.Logging;
+using Dalamud.Memory;
 using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using TransWindows.Windows;
+using WindowTricks.Windows;
 
-namespace TransWindows;
+namespace WindowTricks;
 
 public class Service
 {
-    [PluginService] public static Framework Framework { get; set; } = null!;
+    [PluginService]
+    public static Framework Framework { get; set; } = null!;
 }
 
 public sealed class Plugin : IDalamudPlugin
 {
-    public string Name => "TransWindows";
-    private const string CommandName = "/twindows";
+    public string Name => "WindowTricks";
 
     private DalamudPluginInterface PluginInterface { get; init; }
     private CommandManager CommandManager { get; init; }
     public Configuration Configuration { get; init; }
-    public WindowSystem WindowSystem = new("TransWindows");
+    public readonly WindowSystem WindowSystem = new("WindowTricks");
 
     private ConfigWindow ConfigWindow { get; init; }
-    private MainWindow MainWindow { get; init; }
+
+    private static readonly string[] BlacklistedUnits =
+    {
+        "Hud"
+    };
 
     public Plugin(
         [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
         [RequiredVersion("1.0")] CommandManager commandManager)
     {
-        this.PluginInterface = pluginInterface;
         pluginInterface.Create<Service>();
+        this.PluginInterface = pluginInterface;
         this.CommandManager = commandManager;
 
         this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         this.Configuration.Initialize(this.PluginInterface);
 
-        // you might normally want to embed resources and load them from the manifest stream
-
         ConfigWindow = new ConfigWindow(this);
-        MainWindow = new MainWindow(this);
 
         WindowSystem.AddWindow(ConfigWindow);
-        WindowSystem.AddWindow(MainWindow);
 
-        this.CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
+        this.CommandManager.AddHandler("/wtricks", new CommandInfo(OnCommand)
         {
             HelpMessage = "A useful message to display in /xlhelp"
         });
 
-        this.PluginInterface.UiBuilder.Draw += DrawUI;
-        this.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
+        pluginInterface.UiBuilder.Draw += DrawUI;
+        pluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
         Service.Framework.Update += OnUpdate;
     }
 
@@ -65,15 +68,22 @@ public sealed class Plugin : IDalamudPlugin
             var unitManagers = &stage->RaptureAtkUnitManager->AtkUnitManager;
             var depthFive = &unitManagers->DepthLayerFiveList;
             var focusedList = &unitManagers->FocusedUnitsList;
-            
+
             var focused = new List<nint>();
             foreach (var index in Enumerable.Range(0, (int)focusedList->Count))
-                focused.Add((nint)(&focusedList->AtkUnitEntries)[index]);
+            {
+                var unitBase = (&focusedList->AtkUnitEntries)[index];
+                var root = NativeUI.FollowUp(unitBase);
+                focused.Add((nint)root);
+            }
 
             foreach (var index in Enumerable.Range(0, (int)depthFive->Count))
             {
-                var unitBase = (&depthFive->AtkUnitEntries)[index];
-                if (!unitBase->IsVisible || *unitBase->Name == '_') continue;
+                var unitBase = NativeUI.FollowUp((&depthFive->AtkUnitEntries)[index]);
+
+                if (!unitBase->IsVisible || unitBase->Alpha is not 255 and not 125) continue;
+                if (*unitBase->Name == '_' || BlacklistedUnits.Contains(MemoryHelper.ReadStringNullTerminated((IntPtr)unitBase->Name)))
+                    continue;
                 
                 unitBase->SetAlpha(focused.Contains((nint)unitBase) ? (byte)255 : (byte)125);
             }
@@ -85,17 +95,23 @@ public sealed class Plugin : IDalamudPlugin
         this.WindowSystem.RemoveAllWindows();
 
         ConfigWindow.Dispose();
-        MainWindow.Dispose();
 
-        this.CommandManager.RemoveHandler(CommandName);
-        
+        this.CommandManager.RemoveHandler("/wtricks");
+
         Service.Framework.Update -= OnUpdate;
     }
 
     private void OnCommand(string command, string args)
     {
-        // in response to the slash command, just display our main ui
-        MainWindow.IsOpen = true;
+        switch (args)
+        {
+            case "reset":
+                NativeUI.ResetAlphas();
+                break;
+            default:
+                ConfigWindow.IsOpen = !ConfigWindow.IsOpen;
+                break;
+        }
     }
 
     private void DrawUI()

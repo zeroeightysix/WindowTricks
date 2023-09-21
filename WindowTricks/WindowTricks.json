@@ -1,9 +1,9 @@
 {
   "Author": "your name here",
-  "Name": "Transparent Windows",
+  "Name": "Window Tricks",
   "Punchline": "A short one-liner that shows up in /xlplugins.",
   "Description": "A description that shows up in /xlplugins. List any major slash-command(s).",
-  "InternalName": "TransWindows",
+  "InternalName": "WindowTricks",
   "ApplicableVersion": "any",
   "Tags": [
     "sample",
