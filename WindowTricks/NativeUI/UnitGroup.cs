@@ -40,8 +40,8 @@ public class UnitGroup
         children.Add(child);
     }
 
-    public void Detach(Pointer<AtkUnitBase> child)
+    public bool Detach(Pointer<AtkUnitBase> child)
     {
-        children.Remove(child);
+        return children.Remove(child);
     }
 }
