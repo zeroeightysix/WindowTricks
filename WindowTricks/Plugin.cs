@@ -28,8 +28,9 @@ public sealed class Plugin : IDalamudPlugin
     private CommandManager CommandManager { get; init; }
     public Configuration Configuration { get; init; }
     public readonly WindowSystem WindowSystem = new("WindowTricks");
-
     private ConfigWindow ConfigWindow { get; init; }
+
+    private UnitManager unitManager = new();
 
     // HUD addons that shouldn't be transparent
     private static readonly string[] IgnoredUnits =
@@ -51,7 +52,7 @@ public sealed class Plugin : IDalamudPlugin
         this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         this.Configuration.Initialize(this.PluginInterface);
 
-        ConfigWindow = new ConfigWindow(this);
+        ConfigWindow = new ConfigWindow(this, unitManager);
 
         WindowSystem.AddWindow(ConfigWindow);
 
@@ -69,6 +70,8 @@ public sealed class Plugin : IDalamudPlugin
     {
         unsafe
         {
+            unitManager.OnUpdate();
+            
             var stage = AtkStage.GetSingleton();
             var unitManagers = &stage->RaptureAtkUnitManager->AtkUnitManager;
             var depthFive = &unitManagers->DepthLayerFiveList;

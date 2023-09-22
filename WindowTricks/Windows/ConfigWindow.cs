@@ -1,18 +1,21 @@
 ﻿using System;
 using Dalamud.Interface.Windowing;
 using ImGuiNET;
+using WindowTricks.NativeUI;
 
 namespace WindowTricks.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {
+    public UnitManager UnitManager { get; }
     private readonly Configuration configuration;
 
-    public ConfigWindow(Plugin plugin) : base(
+    public ConfigWindow(Plugin plugin, UnitManager unitManager) : base(
         plugin.Name,
         ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
         ImGuiWindowFlags.NoScrollWithMouse)
     {
+        UnitManager = unitManager;
         this.configuration = plugin.Configuration;
     }
 
@@ -36,6 +39,12 @@ public class ConfigWindow : Window, IDisposable
                 configuration.Transparency = (byte)transparency;
                 configuration.Save();
             }
+        }
+        
+        ImGui.Text($"{UnitManager.groups.Count} groups:");
+        foreach (var (_, group) in UnitManager.groups)
+        {
+            ImGui.Text($"{group.AddonName} of {group.children.Count} children");
         }
     }
 }
