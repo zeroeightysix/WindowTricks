@@ -70,6 +70,13 @@ public class UnitManager
                 
                 PluginLog.Debug($"Removed group of {invalidGroup.AddonName}");
             }
+            else
+            {
+                foreach (var group in groups.Values)
+                {
+                    group.Detach(deletedUnitBase);
+                }
+            }
         }
         
         // finally, we update the 'previous' unitBases list.
