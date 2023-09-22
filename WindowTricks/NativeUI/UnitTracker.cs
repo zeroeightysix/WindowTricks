@@ -8,7 +8,7 @@ using FFXIVClientStructs.Interop;
 
 namespace WindowTricks.NativeUI;
 
-public class UnitManager
+public class UnitTracker
 {
     // This looks ugly. And it is, but we've pinky promised that we'll only access data behind these pointers if we're
     // sure it's valid. I mean, this entire abstraction is to keep the state that way. Together, we can form a beautiful

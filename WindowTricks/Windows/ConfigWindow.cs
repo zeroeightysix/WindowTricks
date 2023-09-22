@@ -7,15 +7,15 @@ namespace WindowTricks.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {
-    public UnitManager UnitManager { get; }
+    public UnitTracker UnitTracker { get; }
     private readonly Configuration configuration;
 
-    public ConfigWindow(Plugin plugin, UnitManager unitManager) : base(
+    public ConfigWindow(Plugin plugin, UnitTracker unitTracker) : base(
         plugin.Name,
         ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
         ImGuiWindowFlags.NoScrollWithMouse)
     {
-        UnitManager = unitManager;
+        UnitTracker = unitTracker;
         this.configuration = plugin.Configuration;
     }
 
@@ -41,8 +41,8 @@ public class ConfigWindow : Window, IDisposable
             }
         }
         
-        ImGui.Text($"{UnitManager.groups.Count} groups:");
-        foreach (var (_, group) in UnitManager.groups)
+        ImGui.Text($"{UnitTracker.groups.Count} groups:");
+        foreach (var (_, group) in UnitTracker.groups)
         {
             ImGui.Text($"{group.AddonName} of {group.children.Count} children");
         }
