@@ -42,9 +42,11 @@ public class ConfigWindow : Window, IDisposable
         }
         
         ImGui.Text($"{UnitTracker.Groups.Count} groups:");
-        foreach (var (_, group) in UnitTracker.Groups)
+        foreach (var group in UnitTracker.Groups.Values)
         {
+            if (group.Focused) ImGui.PushStyleColor(ImGuiCol.Text, 0xAA00FF00);
             ImGui.Text($"{group.AddonName} of {group.children.Count} children");
+            if (group.Focused) ImGui.PopStyleColor(1);
         }
     }
 }

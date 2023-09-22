@@ -30,7 +30,8 @@ public sealed class Plugin : IDalamudPlugin
     public readonly WindowSystem WindowSystem = new("WindowTricks");
     private ConfigWindow ConfigWindow { get; init; }
 
-    private UnitGroupTracker unitTracker = new(4);
+    private UnitGroupTracker fiveTracker = new(4);
+    private FocusTracker focusTracker;
 
     // HUD addons that shouldn't be transparent
     private static readonly string[] IgnoredUnits =
@@ -52,7 +53,7 @@ public sealed class Plugin : IDalamudPlugin
         this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         this.Configuration.Initialize(this.PluginInterface);
 
-        ConfigWindow = new ConfigWindow(this, unitTracker);
+        ConfigWindow = new ConfigWindow(this, fiveTracker);
 
         WindowSystem.AddWindow(ConfigWindow);
 
@@ -64,13 +65,16 @@ public sealed class Plugin : IDalamudPlugin
         pluginInterface.UiBuilder.Draw += DrawUI;
         pluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
         Service.Framework.Update += OnUpdate;
+
+        focusTracker = new FocusTracker(fiveTracker);
     }
 
     private void OnUpdate(Framework framework)
     {
         unsafe
         {
-            unitTracker.OnUpdate();
+            fiveTracker.OnUpdate();
+            focusTracker.OnUpdate();
             
             var stage = AtkStage.GetSingleton();
             var unitManagers = &stage->RaptureAtkUnitManager->AtkUnitManager;
