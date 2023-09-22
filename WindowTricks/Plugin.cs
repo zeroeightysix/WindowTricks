@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using Dalamud.Game;
 using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
-using Dalamud.Memory;
 using Dalamud.Plugin;
-using FFXIVClientStructs.FFXIV.Component.GUI;
 using WindowTricks.NativeUI;
 using WindowTricks.Windows;
 
@@ -71,33 +67,22 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnUpdate(Framework framework)
     {
+        if (!Configuration.EnableTransparentWindows)
+            return;
+        
         unsafe
         {
             fiveTracker.OnUpdate();
             focusTracker.OnUpdate();
             
-            var stage = AtkStage.GetSingleton();
-            var unitManagers = &stage->RaptureAtkUnitManager->AtkUnitManager;
-            var depthFive = &unitManagers->DepthLayerFiveList;
-            var focusedList = &unitManagers->FocusedUnitsList;
-
-            var focused = new List<nint>();
-            foreach (var index in Enumerable.Range(0, (int)focusedList->Count))
+            foreach (var group in fiveTracker.Groups.Values)
             {
-                var unitBase = (&focusedList->AtkUnitEntries)[index];
-                var root = UiUtils.FindRoot(unitBase);
-                focused.Add((nint)root);
-            }
-
-            foreach (var index in Enumerable.Range(0, (int)depthFive->Count))
-            {
-                var unitBase = UiUtils.FindRoot((&depthFive->AtkUnitEntries)[index]);
-
-                if (!unitBase->IsVisible) continue;
-                if (*unitBase->Name == '_' || IgnoredUnits.Contains(MemoryHelper.ReadStringNullTerminated((IntPtr)unitBase->Name)))
+                if (IgnoredUnits.Contains(group.AddonName))
                     continue;
-                
-                unitBase->SetAlpha(focused.Contains((nint)unitBase) ? (byte)255 : Configuration.Transparency);
+                foreach (var unit in group.units)
+                {
+                    unit.Value->SetAlpha(group.Focused ? Configuration.FocusOpacity : Configuration.UnfocusOpacity);
+                }
             }
         }
     }

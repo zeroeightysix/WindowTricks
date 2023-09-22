@@ -27,16 +27,25 @@ public class ConfigWindow : Window, IDisposable
         if (ImGui.Checkbox("Enable Transparent Windows", ref configValue))
         {
             configuration.EnableTransparentWindows = configValue;
+            UiUtils.ResetAlphas();
             configuration.Save();
         }
 
         if (configuration.EnableTransparentWindows)
         {
-            var transparency = (int)configuration.Transparency;
-            if (ImGui.SliderInt("Opacity", ref transparency, 20, 254,
-                                $"{(int)(transparency / 2.55f)}%%", ImGuiSliderFlags.NoInput))
+            var focusOpacity = (int)configuration.FocusOpacity;
+            if (ImGui.SliderInt("Focused opacity", ref focusOpacity, 20, 255,
+                                $"{(int)(focusOpacity / 2.55f)}%%", ImGuiSliderFlags.NoInput))
             {
-                configuration.Transparency = (byte)transparency;
+                configuration.FocusOpacity = (byte)focusOpacity;
+                configuration.Save();
+            }
+            
+            var unfocusOpacity = (int)configuration.UnfocusOpacity;
+            if (ImGui.SliderInt("Unfocused opacity", ref unfocusOpacity, 20, 254,
+                                $"{(int)(unfocusOpacity / 2.55f)}%%", ImGuiSliderFlags.NoInput))
+            {
+                configuration.UnfocusOpacity = (byte)unfocusOpacity;
                 configuration.Save();
             }
         }
