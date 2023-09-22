@@ -53,7 +53,6 @@ public class ConfigWindow : Window, IDisposable
         ImGui.Text($"{UnitTracker.Groups.Count} groups:");
         foreach (var group in UnitTracker.Groups.Values)
         {
-            if (group.Focused) ImGui.PushStyleColor(ImGuiCol.Text, 0xAA00FF00);
             if (ImGui.CollapsingHeader($"{group.AddonName} of {group.units.Count} units"))
             {
                 foreach (var unit in group.units)
@@ -64,8 +63,6 @@ public class ConfigWindow : Window, IDisposable
                     }
                 }
             }
-            
-            if (group.Focused) ImGui.PopStyleColor(1);
         }
     }
 }

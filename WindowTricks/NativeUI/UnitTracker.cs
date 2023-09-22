@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Logging;
-using Dalamud.Memory;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using FFXIVClientStructs.Interop;
 
@@ -13,7 +13,7 @@ public abstract class UnitTracker
     // This looks ugly. And it is, but we've pinky promised that we'll only access data behind these pointers if we're
     // sure it's valid. I mean, this entire abstraction is to keep the state that way. Together, we can form a beautiful
     // palace of pointers to memory that hasn't been freed yet. Together, we can do anything!
-    private List<Pointer<AtkUnitBase>> unitBases = new();
+    protected List<Pointer<AtkUnitBase>> unitBases = new();
 
     private readonly uint target;
 
@@ -38,7 +38,11 @@ public abstract class UnitTracker
 
         // TODO: can't we basically memcpy this list
         foreach (var index in Enumerable.Range(0, (int)depthFive->Count))
-            newUnitBases.Add((&depthFive->AtkUnitEntries)[index]);
+        {
+            var addon = (&depthFive->AtkUnitEntries)[index];
+            if (RaptureAtkModule.Instance()->AtkModule.IsAddonReady(addon->ID))
+                newUnitBases.Add(addon);
+        }
 
         foreach (var unitBase in newUnitBases)
         {
@@ -66,24 +70,27 @@ public class UnitGroupTracker : UnitTracker
 
     protected override unsafe void OnNew(AtkUnitBase* unitBase)
     {
-        // what duh hell this unitBase is new
-        // figure out who its daddy is:
-        var daddy = UiUtils.FindRoot(unitBase);
+        // figure out the root of unitBase:
+        var parent = UiUtils.FindRoot(unitBase);
 
-        if (Groups.TryGetValue((nint)daddy, out var daddysGroup))
-            daddysGroup.Attach(unitBase);
+        if (Groups.TryGetValue((nint)parent, out var parentGroup))
+        {
+            parentGroup.Attach(unitBase);
+            PluginLog.Debug($"{parentGroup.AddonName}: Attach {(IntPtr)unitBase:X}");
+        }
         else
         {
-            PluginLog.Debug($"create {MemoryHelper.ReadStringNullTerminated((IntPtr)daddy->Name)}");
-            // create a new group
-            CreateGroupForRoot(unitBase, daddy);
+            // create a new group for this root
+            var group = CreateGroupForRoot(parent);
+            // and add the new child to the group immediately
+            group.Attach(unitBase);
+            PluginLog.Debug($"Create {group.AddonName} with {(IntPtr)unitBase:X}, root {(IntPtr)parent:X}");
         }
     }
 
-    internal unsafe UnitGroup CreateGroupForRoot(AtkUnitBase* unitBase, AtkUnitBase* root)
+    internal unsafe UnitGroup CreateGroupForRoot(AtkUnitBase* root)
     {
         var group = new UnitGroup(root);
-        group.Attach(unitBase);
         Groups.Add((nint)root, group);
         return group;
     }
@@ -91,46 +98,26 @@ public class UnitGroupTracker : UnitTracker
     protected override unsafe void OnDelete(AtkUnitBase* deletedUnitBase)
     {
         var key = (nint)deletedUnitBase;
-        if (Groups.TryGetValue(key, out var invalidGroup))
-        {
-            Groups.Remove(key);
+        if (Groups.TryGetValue(key, out var invalidGroup) && Groups.Remove(key))
+            PluginLog.Debug($"{invalidGroup.AddonName}: Group removed " +
+                            $"(root {(IntPtr)invalidGroup.root:X}) because of {(nint)deletedUnitBase:X}");
 
-            PluginLog.Debug($"Removed group of {invalidGroup.AddonName}");
-        }
-        else
+        foreach (var group in Groups.Values)
         {
-            foreach (var group in Groups.Values)
-            {
-                group.Detach(deletedUnitBase);
-            }
+            if (group.Detach(deletedUnitBase))
+                PluginLog.Debug($"{group.AddonName}: Detached {(IntPtr)deletedUnitBase:X})");
         }
     }
 }
 
 public class FocusTracker : UnitTracker
 {
-    private readonly UnitGroupTracker groupTracker;
+    public FocusTracker() : base(14) //AtkUnitManager.FocusedUnitsList
+    { }
 
-    public FocusTracker(UnitGroupTracker groupTracker) : base(14) //AtkUnitManager.FocusedUnitsList
-    {
-        this.groupTracker = groupTracker;
-    }
+    public bool IsFocused(UnitGroup group) => group.units.Any(unit => unitBases.Contains(unit));
 
-    protected override unsafe void OnNew(AtkUnitBase* unitBase)
-    {
-        var root = UiUtils.FindRoot(unitBase);
-        if (!groupTracker.Groups.TryGetValue((nint)root, out var group))
-            group = groupTracker.CreateGroupForRoot(unitBase, root);
+    protected override unsafe void OnNew(AtkUnitBase* newUnitBase) { }
 
-        group.Focused = true;
-    }
-
-    protected override unsafe void OnDelete(AtkUnitBase* unitBase)
-    {
-        // we cannot rely on unitBase being a valid pointer, or it remembering its parent, so we have to go look for it
-        foreach (var group in groupTracker.Groups.Values)
-        {
-            if (group.units.Contains(unitBase)) group.Focused = false;
-        }
-    }
+    protected override unsafe void OnDelete(AtkUnitBase* deletedUnitBase) { }
 }

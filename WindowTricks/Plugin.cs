@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Dalamud.Game;
 using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
@@ -26,7 +26,7 @@ public sealed class Plugin : IDalamudPlugin
     public readonly WindowSystem WindowSystem = new("WindowTricks");
     private ConfigWindow ConfigWindow { get; init; }
 
-    private UnitGroupTracker fiveTracker = new(4);
+    private UnitGroupTracker fiveTracker;
     private FocusTracker focusTracker;
 
     // HUD addons that shouldn't be transparent
@@ -35,7 +35,8 @@ public sealed class Plugin : IDalamudPlugin
         "Hud",
         "AreaMap",
         "ChatLog",
-        "ScenarioTree"
+        "ScenarioTree",
+        "SelectYesno"
     };
 
     public Plugin(
@@ -48,6 +49,9 @@ public sealed class Plugin : IDalamudPlugin
 
         this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         this.Configuration.Initialize(this.PluginInterface);
+        
+        focusTracker = new FocusTracker();
+        fiveTracker = new UnitGroupTracker(4);
 
         ConfigWindow = new ConfigWindow(this, fiveTracker);
 
@@ -61,8 +65,6 @@ public sealed class Plugin : IDalamudPlugin
         pluginInterface.UiBuilder.Draw += DrawUI;
         pluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
         Service.Framework.Update += OnUpdate;
-
-        focusTracker = new FocusTracker(fiveTracker);
     }
 
     private void OnUpdate(Framework framework)
@@ -79,9 +81,11 @@ public sealed class Plugin : IDalamudPlugin
             {
                 if (IgnoredUnits.Contains(group.AddonName))
                     continue;
+                
+                var focus = focusTracker.IsFocused(group);
                 foreach (var unit in group.units)
                 {
-                    unit.Value->SetAlpha(group.Focused ? Configuration.FocusOpacity : Configuration.UnfocusOpacity);
+                    unit.Value->SetAlpha(focus ? Configuration.FocusOpacity : Configuration.UnfocusOpacity);
                 }
             }
         }

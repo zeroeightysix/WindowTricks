@@ -8,10 +8,9 @@ namespace WindowTricks.NativeUI;
 
 public class UnitGroup
 {
-    public bool Focused { get; set; }
     public string AddonName { get; }
 
-    private readonly unsafe AtkUnitBase* root;
+    internal readonly unsafe AtkUnitBase* root;
 
     // luckily, we don't care about the hierarchy of the group (although it is usually not more than 1 level tall either way)
     internal readonly List<Pointer<AtkUnitBase>> units;
