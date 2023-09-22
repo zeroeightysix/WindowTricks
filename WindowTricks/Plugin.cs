@@ -30,7 +30,7 @@ public sealed class Plugin : IDalamudPlugin
     public readonly WindowSystem WindowSystem = new("WindowTricks");
     private ConfigWindow ConfigWindow { get; init; }
 
-    private UnitTracker unitTracker = new();
+    private UnitGroupTracker unitTracker = new(4);
 
     // HUD addons that shouldn't be transparent
     private static readonly string[] IgnoredUnits =
