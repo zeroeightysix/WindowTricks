@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Memory;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using FFXIVClientStructs.Interop;
 
 namespace WindowTricks.NativeUI;
 
 public static class UiUtils
 {
     // Some sub-windows don't have a `ParentID`. We store the known ones here.
-    private static Dictionary<string, string> HiddenParents = new Dictionary<string, string>
+    private static Dictionary<string, string> HiddenParents = new()
     {
         { "FreeCompanyTopics", "FreeCompany" },
         { "FreeCompanyMember", "FreeCompany" },
@@ -19,6 +18,10 @@ public static class UiUtils
         { "FreeCompanyAction", "FreeCompany" },
         { "FreeCompanyActivity", "FreeCompany" },
         { "FreeCompanyStatus", "FreeCompany" },
+        { "FriendList", "Social" },
+        { "PartyMemberList", "Social" },
+        { "BlackList", "Social" },
+        { "SocialList", "Social" },
     };
 
     public static unsafe void ResetAlphas()
