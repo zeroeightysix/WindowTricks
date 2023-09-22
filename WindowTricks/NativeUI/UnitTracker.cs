@@ -83,8 +83,7 @@ public class UnitGroupTracker : UnitTracker
     internal unsafe UnitGroup CreateGroupForRoot(AtkUnitBase* unitBase, AtkUnitBase* root)
     {
         var group = new UnitGroup(root);
-        if (unitBase != root)
-            group.Attach(unitBase);
+        group.Attach(unitBase);
         Groups.Add((nint)root, group);
         return group;
     }
@@ -131,7 +130,7 @@ public class FocusTracker : UnitTracker
         // we cannot rely on unitBase being a valid pointer, or it remembering its parent, so we have to go look for it
         foreach (var group in groupTracker.Groups.Values)
         {
-            if (group.children.Contains(unitBase)) group.Focused = false;
+            if (group.units.Contains(unitBase)) group.Focused = false;
         }
     }
 }

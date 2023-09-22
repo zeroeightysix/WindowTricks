@@ -8,40 +8,40 @@ namespace WindowTricks.NativeUI;
 
 public class UnitGroup
 {
-    public bool Focused { get; set; } = false;
+    public bool Focused { get; set; }
     public string AddonName { get; }
 
     private readonly unsafe AtkUnitBase* root;
 
     // luckily, we don't care about the hierarchy of the group (although it is usually not more than 1 level tall either way)
-    internal readonly List<Pointer<AtkUnitBase>> children = new();
+    internal readonly List<Pointer<AtkUnitBase>> units;
 
-    /// <summary>
-    /// SAFETY: This object is safe as long as the provided <see cref="AtkUnitBase"/> pointer is valid,
-    /// and all children attached through <see cref="Attach"/> are valid pointers.
-    /// </summary>
-    /// <param name="root"></param>
     public unsafe UnitGroup(AtkUnitBase* root)
     {
         this.root = root;
-        AddonName = MemoryHelper.ReadStringNullTerminated((IntPtr)root->Name);
+        AddonName = MemoryHelper.ReadStringNullTerminated((nint)root->Name);
+        units = new List<Pointer<AtkUnitBase>> { root };
     }
 
-    public ushort GetRootId()
+    public void Attach(Pointer<AtkUnitBase> unit)
     {
         unsafe
         {
-            return root->ID;
+            // from the C# spec,
+            // comparing numbers may not be used in a safe context.*
+            // seriously, who designed this language? microsoft? 
+        
+        
+            // yeah that makes sense i guess
+        
+            // * by numbers i mean pointers, which are, you guessed it, numbers
+            if (unit != root)
+                units.Add(unit);
         }
     }
 
-    public void Attach(Pointer<AtkUnitBase> child)
+    public bool Detach(Pointer<AtkUnitBase> unit)
     {
-        children.Add(child);
-    }
-
-    public bool Detach(Pointer<AtkUnitBase> child)
-    {
-        return children.Remove(child);
+        return units.Remove(unit);
     }
 }

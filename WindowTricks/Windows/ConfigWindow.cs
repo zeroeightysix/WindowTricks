@@ -33,7 +33,7 @@ public class ConfigWindow : Window, IDisposable
         if (configuration.EnableTransparentWindows)
         {
             var transparency = (int)configuration.Transparency;
-            if (ImGui.SliderInt("Transparency", ref transparency, 20, 254,
+            if (ImGui.SliderInt("Opacity", ref transparency, 20, 254,
                                 $"{(int)(transparency / 2.55f)}%%", ImGuiSliderFlags.NoInput))
             {
                 configuration.Transparency = (byte)transparency;
@@ -45,7 +45,17 @@ public class ConfigWindow : Window, IDisposable
         foreach (var group in UnitTracker.Groups.Values)
         {
             if (group.Focused) ImGui.PushStyleColor(ImGuiCol.Text, 0xAA00FF00);
-            ImGui.Text($"{group.AddonName} of {group.children.Count} children");
+            if (ImGui.CollapsingHeader($"{group.AddonName} of {group.units.Count} units"))
+            {
+                foreach (var unit in group.units)
+                {
+                    unsafe
+                    {
+                        ImGui.Text(((IntPtr)unit.Value).ToString("X"));
+                    }
+                }
+            }
+            
             if (group.Focused) ImGui.PopStyleColor(1);
         }
     }
