@@ -31,13 +31,12 @@ public static class UiUtils
         }
     }
 
-    public static unsafe AtkUnitBase* FindRoot(AtkUnitBase* unitBase, Action<Pointer<AtkUnitBase>>? consumer = null)
+    public static unsafe AtkUnitBase* FindRoot(AtkUnitBase* unitBase)
     {
         var rapture = AtkStage.GetSingleton()->RaptureAtkUnitManager;
 
         while (true)
         {
-            consumer?.Invoke(unitBase);
             var parentId = unitBase->ParentID;
             if (parentId == 0)
             {
