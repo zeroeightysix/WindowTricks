@@ -1,5 +1,7 @@
 ﻿using System;
 using Dalamud.Interface.Windowing;
+using Dalamud.Memory;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using WindowTricks.NativeUI;
 
@@ -7,21 +9,21 @@ namespace WindowTricks.Windows;
 
 public class ConfigWindow : Window, IDisposable
 {
-    public UnitGroupTracker UnitTracker { get; }
+    public UnitGroupManager UnitGroupManager { get; }
     private readonly Configuration configuration;
 
-    public ConfigWindow(Plugin plugin, UnitGroupTracker unitTracker) : base(
+    public ConfigWindow(Plugin plugin, UnitGroupManager unitGroupManager) : base(
         plugin.Name,
         ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
         ImGuiWindowFlags.NoScrollWithMouse)
     {
-        UnitTracker = unitTracker;
+        UnitGroupManager = unitGroupManager;
         this.configuration = plugin.Configuration;
     }
 
     public void Dispose() { }
 
-    public override void Draw()
+    public override unsafe void Draw()
     {
         var configValue = this.configuration.EnableTransparentWindows;
         if (ImGui.Checkbox("Enable Transparent Windows", ref configValue))
@@ -50,19 +52,20 @@ public class ConfigWindow : Window, IDisposable
             }
         }
         
-        ImGui.Text($"{UnitTracker.Groups.Count} groups:");
-        foreach (var group in UnitTracker.Groups.Values)
+        foreach (var group in UnitGroupManager.Groups)
         {
-            if (ImGui.CollapsingHeader($"{group.AddonName} of {group.units.Count} units"))
+            if (group.Focused) ImGui.PushStyleColor(ImGuiCol.Text, 0xFF00FF00);
+            if (ImGui.TreeNode($"{group.AddonName} ({group.FocusCount})###{(nint)group.Root}"))
             {
-                foreach (var unit in group.units)
+                foreach (var unit in group.Units)
                 {
-                    unsafe
-                    {
-                        ImGui.Text(((IntPtr)unit.Value).ToString("X"));
-                    }
+                    var addon = unit.Value;
+                    ImGui.Text($"{MemoryHelper.ReadStringNullTerminated((nint)addon->Name)} at {(nint)addon:X}");
                 }
+
+                ImGui.TreePop();
             }
+            if (group.Focused) ImGui.PopStyleColor(1);
         }
     }
 }

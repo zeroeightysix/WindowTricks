@@ -28,9 +28,9 @@ public static class UiUtils
     {
         var stage = AtkStage.GetSingleton();
         var five = &stage->RaptureAtkUnitManager->AtkUnitManager.DepthLayerFiveList;
-        foreach (var index in Enumerable.Range(0, (int)five->Count))
+        foreach (var ptr in five->EntriesSpan)
         {
-            (&five->AtkUnitEntries)[index]->SetAlpha(255);
+            ptr.Value->SetAlpha(255);
         }
     }
 

@@ -1,9 +1,11 @@
-using System.Linq;
-using Dalamud.Game;
+using Dalamud.Game.Addon.Lifecycle;
+using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Game.Command;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
+using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 using WindowTricks.NativeUI;
 using WindowTricks.Windows;
 
@@ -12,7 +14,13 @@ namespace WindowTricks;
 public class Service
 {
     [PluginService]
-    public static Framework Framework { get; set; } = null!;
+    public static IFramework Framework { get; set; } = null!;
+
+    [PluginService]
+    public static IPluginLog Log { get; set; } = null!;
+    
+    [PluginService]
+    public static IAddonLifecycle AddonLifecycle { get; set; } = null!;
 }
 
 // ReSharper disable once ClassNeverInstantiated.Global
@@ -21,13 +29,12 @@ public sealed class Plugin : IDalamudPlugin
     public string Name => "WindowTricks";
 
     private DalamudPluginInterface PluginInterface { get; init; }
-    private CommandManager CommandManager { get; init; }
+    private ICommandManager CommandManager { get; init; }
     public Configuration Configuration { get; init; }
     public readonly WindowSystem WindowSystem = new("WindowTricks");
     private ConfigWindow ConfigWindow { get; init; }
-
-    private UnitGroupTracker fiveTracker;
-    private FocusTracker focusTracker;
+    private UnitGroupManager UnitGroupManager { get; set; }
+    private FocusTracker FocusTracker { get; set; }
 
     // HUD addons that shouldn't be transparent
     private static readonly string[] IgnoredUnits =
@@ -41,7 +48,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public Plugin(
         [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
-        [RequiredVersion("1.0")] CommandManager commandManager)
+        [RequiredVersion("1.0")] ICommandManager commandManager)
     {
         pluginInterface.Create<Service>();
         this.PluginInterface = pluginInterface;
@@ -49,11 +56,10 @@ public sealed class Plugin : IDalamudPlugin
 
         this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         this.Configuration.Initialize(this.PluginInterface);
-        
-        focusTracker = new FocusTracker();
-        fiveTracker = new UnitGroupTracker(4);
 
-        ConfigWindow = new ConfigWindow(this, fiveTracker);
+        UnitGroupManager = new UnitGroupManager();
+        FocusTracker = new FocusTracker(UnitGroupManager);
+        ConfigWindow = new ConfigWindow(this, UnitGroupManager);
 
         WindowSystem.AddWindow(ConfigWindow);
 
@@ -65,27 +71,34 @@ public sealed class Plugin : IDalamudPlugin
         pluginInterface.UiBuilder.Draw += DrawUI;
         pluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
         Service.Framework.Update += OnUpdate;
+        Service.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "", OnAddonSetup);
+        Service.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "", OnAddonFinalize);
     }
 
-    private void OnUpdate(Framework framework)
+    private unsafe void OnAddonSetup(AddonEvent eventtype, AddonArgs addoninfo)
+    {
+        UnitGroupManager.Register((AtkUnitBase*)addoninfo.Addon);
+    }
+
+    private unsafe void OnAddonFinalize(AddonEvent eventtype, AddonArgs addoninfo)
+    {
+        UnitGroupManager.Unregister((AtkUnitBase*)addoninfo.Addon);
+    }
+
+    private void OnUpdate(IFramework framework)
     {
         if (!Configuration.EnableTransparentWindows)
             return;
         
-        unsafe
+        FocusTracker.OnUpdate();
+        
+        foreach (var group in UnitGroupManager.Groups)
         {
-            fiveTracker.OnUpdate();
-            focusTracker.OnUpdate();
-            
-            foreach (var group in fiveTracker.Groups.Values)
+            unsafe
             {
-                if (IgnoredUnits.Contains(group.AddonName))
-                    continue;
-                
-                var focus = focusTracker.IsFocused(group);
-                foreach (var unit in group.units)
+                foreach (var unit in group.Units)
                 {
-                    unit.Value->SetAlpha(focus ? Configuration.FocusOpacity : Configuration.UnfocusOpacity);
+                    unit.Value->SetAlpha(group.Focused ? Configuration.FocusOpacity : Configuration.UnfocusOpacity);
                 }
             }
         }
