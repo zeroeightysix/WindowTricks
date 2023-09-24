@@ -1,3 +1,4 @@
+using System.Linq;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Game.Command;
@@ -18,9 +19,12 @@ public class Service
 
     [PluginService]
     public static IPluginLog Log { get; set; } = null!;
-    
+
     [PluginService]
     public static IAddonLifecycle AddonLifecycle { get; set; } = null!;
+
+    [PluginService]
+    public static IClientState ClientState { get; set; } = null!;
 }
 
 // ReSharper disable once ClassNeverInstantiated.Global
@@ -43,7 +47,6 @@ public sealed class Plugin : IDalamudPlugin
         "AreaMap",
         "ChatLog",
         "ScenarioTree",
-        "SelectYesno"
     };
 
     public Plugin(
@@ -73,6 +76,17 @@ public sealed class Plugin : IDalamudPlugin
         Service.Framework.Update += OnUpdate;
         Service.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "", OnAddonSetup);
         Service.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "", OnAddonFinalize);
+
+        unsafe
+        {
+            var loadedUnits = &AtkStage.GetSingleton()->RaptureAtkUnitManager->AtkUnitManager.AllLoadedUnitsList;
+
+            foreach (var index in Enumerable.Range(0, loadedUnits->Count))
+            {
+                var unit = loadedUnits->EntriesSpan[index].Value;
+                UnitGroupManager.Register(unit);
+            }
+        }
     }
 
     private unsafe void OnAddonSetup(AddonEvent eventtype, AddonArgs addoninfo)
@@ -89,9 +103,9 @@ public sealed class Plugin : IDalamudPlugin
     {
         if (!Configuration.EnableTransparentWindows)
             return;
-        
+
         FocusTracker.OnUpdate();
-        
+
         foreach (var group in UnitGroupManager.Groups)
         {
             unsafe
