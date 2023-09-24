@@ -127,6 +127,8 @@ public sealed class Plugin : IDalamudPlugin
         this.CommandManager.RemoveHandler("/wtricks");
 
         Service.Framework.Update -= OnUpdate;
+        
+        Service.AddonLifecycle.UnregisterListener(OnAddonSetup, OnAddonFinalize);
     }
 
     private void OnCommand(string command, string args)
